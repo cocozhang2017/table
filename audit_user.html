@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>报表</title>
+    <style>
+        #audit {
+            margin-top: 20px;
+        }
+
+        thead > tr {
+            border: 1px solid #cc0000;
+        }
+
+        .filter {
+            margin-left: 20px;
+        }
+
+        .status-picker {
+            display: inline-block;
+        }
+
+        .status-picker select {
+            border-radius: 5px;
+            width: 180px;
+            float: left;
+            height: 37px;
+            margin-bottom: -13px;
+            border: 1px solid skyblue;
+            padding: 0 10px;
+            margin-right: 20px;
+        }
+
+        .container {
+            margin-top: 30px;
+        }
+
+        .jtp {
+            margin-top: 10px;
+            display: inline-block;
+        }
+
+        .jtp .ui.icon.input input {
+            padding: 0.5em !important;
+            width: 32px;
+        }
+
+        .modal .content {
+            display: flex !important;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button {
+            text-align: center;
+        }
+
+        .container {
+            margin-left: 20px;
+        }
+
+        .first {
+            background: #F9FAFB;
+        }
+    </style>
+    <link rel="stylesheet" href="./css/sear.css"/>
+    <script src="./js/jquery-3.1.js"></script>
+    <script src="./js/sear.js"></script>
+    <script src="./js/vue.js"></script>
+</head>
+
+<body>
+<div id="audit">
+    <div class="filter">
+        <div class="status-picker">
+            <select name="aKey" type="hidden" v-model.lazy="aKey">
+                <option value="">所有报表</option>
+                <option value="0">固定报表</option>
+                <option value="1">银行指数</option>
+                <option value="2">NBA</option>
+                <option value="3">CBA</option>
+            </select>
+        </div>
+        <div class="ui input icon">
+            <input type="text" v-model="fKey" placeholder="请输入您要查询的内容"/>
+        </div>
+    </div>
+    <div class="container">
+        <table class="ui compact celled  table">
+            <thead>
+            <tr>
+                <th width="20%" class="first">id</th>
+                <th width="30%">报表类型</th>
+                <th width="50%">报表名称</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="user in filteredUsers">
+                <td>{{ user.id }}</td>
+                <td>
+                    <button class="ui button primary" v-if="user.audit==0">固定报表</button>
+                    <button class="ui button green" v-if="user.audit==1">银行指数</button>
+                    <button class="ui button red" v-if="user.audit==2">NBA</button>
+                    <button class="ui button grey" v-if="user.audit==3">CBA</button>
+                </td>
+                <td>
+                    <a :href="user.url">{{ user.name }}</a>
+                </td>
+            </tr>
+            </tbody>
+            <tfoot class="full-width">
+            <tr>
+                <th colspan="4">
+                    <button @click="turnPage(-1)">
+                        上一页
+                    </button>
+                    <span>当前第 {{ currentPage+1 }} 页,共 {{ totalPage }} 页</span>
+                    <button @click="turnPage(1)">
+                        下一页
+                    </button>
+                    <div class="jtp">
+                        <span>跳转到第 </span>
+                        <div class="ui input icon">
+                            <input type="text" v-model="jPage" @keyup.enter="jumpToPage">
+                        </div>
+                        <span> 页</span>
+                    </div>
+                </th>
+            </tr>
+            </tfoot>
+        </table>
+        <div class="ui basic test modal">
+            <div class="ui items">
+                <div class="item">
+                    <div class="content" style="background-color: #fff">
+                        <a class="header">{{ selectedUser.name }}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var mockUsers = [
+        {
+            name: '贷款余额产品期限结构表',
+            url: 'https://yongshi.net',
+            id: 1,
+            audit: 0
+        },
+        {
+            name: '贷款发生额产品期限结构表',
+            url: 'https://yongshi.net',
+            id: 2,
+            audit: 0
+        },
+        {
+            name: '贷款余额利率是否固定产品期限结构表',
+            url: 'https://yongshi.net',
+            id: 3,
+            audit: 0
+        },
+        {
+            name: '贷款发生额利率是否固定期限结构表',
+            url: 'https://yongshi.net',
+            id: 4,
+            audit: 0
+        },
+        {
+            name: '款余额企业规模期限结构表',
+            url: 'https://yongshi.net',
+            id: 5,
+            audit: 0
+        },
+        {
+            name: '贷款发生额企业规模期限结构表',
+            url: 'https://yongshi.net',
+            id: 6,
+            audit: 0
+        },
+        {
+            name: '存款余额产品期限结构表',
+            url: 'https://yongshi.net',
+            id: 7,
+            audit: 0
+        },
+        {
+            name: '存款发生额产品期限结构表',
+            url: 'https://yongshi.net',
+            id: 8,
+            audit: 0
+        },
+        {
+            name: '存款余额分额度期限结构表',
+            url: 'https://yongshi.net',
+            id: 9,
+            audit: 0
+        },
+        {
+            name: '存款发生额分额度期限结构表',
+            id: 10,
+            url: 'https://yongshi.net',
+            audit: 0
+        },
+        {
+            name: '存款余额',
+            url: 'https://yongshi.net',
+            id: 11,
+            audit: 0
+        },
+        {
+            name: '存款发生额产品额度结构表',
+            url: 'https://yongshi.net',
+            id: 12,
+            audit: 0
+        },
+        {
+            name: '贷款余额担保方式期限结构表',
+            url: 'http://denglu.net',
+            id: 13,
+            audit: 0
+        },
+
+        {
+            name: '贷款发生额担保方式期限结构表',
+            url: 'http://denglu.net',
+            id: 14,
+            audit: 0
+        },
+        {
+            name: '存、贷款加权平均利率及利差时序表',
+            url: 'http://denglu.net',
+            id: 15,
+            audit: 0
+        },
+        {
+            name: '贷款余额分产品统计表',
+            url: 'http://denglu.net',
+            id: 16,
+            audit: 0
+        },
+        {
+            name: '贷款发生额分产品统计表',
+            url: 'http://denglu.net',
+            id: 17,
+            audit: 0
+        },
+        {
+            name: '贷款余额分期限统计表',
+            url: 'http://denglu.net',
+            id: 18,
+            audit: 0
+        },
+        {
+            name: '贷款发生额分期限统计表 ',
+            url: 'http://denglu.net',
+            id: 19,
+            audit: 0
+        },
+        {
+            name: '贷款余额分企业规模统计表',
+            url: 'http://denglu.net',
+            id: 20,
+            audit: 0
+        },
+        {
+            name: '贷款发生额分企业规模统计表 ',
+            url: 'http://denglu.net',
+            id: 21,
+            audit: 0
+        },
+        //景气固定报表
+        {
+            name: '城镇',
+            url: 'https://yongshi.net',
+            id: 1,
+            audit: 1
+        },
+        {
+            name: '城镇储户',
+            url: 'https://yongshi.net',
+            id: 2,
+            audit: 1
+        },
+        {
+            name: '城镇银行',
+            url: 'https://yongshi.net',
+            id: 3,
+            audit: 1
+        },
+        {
+            name: '城市银行',
+            url: 'https://yongshi.net',
+            id: 4,
+            audit: 1
+        },
+        {
+            name: '指数汇总表',
+            url: 'https://yongshi.net',
+            id: 5,
+            audit: 1
+        },
+        {
+            name: '指数时序表',
+            url: 'https://yongshi.net',
+            id: 6,
+            audit: 1
+        },
+        {
+            name: 'NBS',
+            url: 'https://yongshi.net',
+            id:7,
+            audit: 1
+        },
+        {
+            name: '城镇储户问卷调查',
+            url: 'https://yongshi.net',
+            id: 8,
+            audit: 1
+        },
+        //专题分析数据
+        {name: '专题分析', id: 1, audit: 2},
+        {name: '专题分析', id: 2, audit: 2},
+        {name: '专题分析', id: 3, audit: 2},
+        {name: '专题分析', id: 4, audit: 2},
+        {name: '专题分析', id: 5, audit: 2},
+        {name: '专题分析', id: 6, audit: 2},
+
+
+        //社会融资数据
+        {
+            name: '社会人',
+            url: 'http://denglu.net',
+            id: 1,
+            audit: 3
+        },
+        {
+            name: '社会融资呵呵',
+            url: 'http://denglu.net',
+            id: 2,
+            audit: 3
+        },
+        {
+            name: '构成统计表',
+            url: 'http://denglu.net',
+            id: 3,
+            audit: 3
+        },
+        {
+            name: '股票融资',
+            url: 'http://denglu.net',
+            id: 4,
+            audit: 3
+        },
+        {
+            name: '企业债券',
+            url: 'https://yongshi.net',
+            id: 5,
+            audit: 3
+        },
+        {
+            name: '企业债劵类',
+            url: 'https://yongshi.net',
+            id: 6,
+            audit: 3
+        },
+        {
+            name: '社会融资规',
+            url: 'https://yongshi.net',
+            id: 7,
+            audit: 3
+        },
+    ];
+
+    var STORAGE_KEY = 'users';
+    var userStorage = {
+        fetch: function () {
+            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || mockUsers
+        },
+        save: function (data) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+        }
+    };
+
+    const vm = new Vue({
+        name: 'audit',
+        el: '#audit',
+        data() {
+            return {
+                users: userStorage.fetch(), // users 数据
+                selectedUsers: [], // 保存选中的 users 数组
+                selectedUser: {}, // 选中 user
+                fKey: '', // 过滤 name 的关键字
+                name: '', // 上一次过滤的 name 关键字，初始化为''
+                aKey: '', // select audit 的关键字
+                audit: '', // 上一次过滤的 audit关键字，初始化为''
+                couponSelected: '',
+                limit: 10, // 每页显示行数
+                totalPage: 0, // 总页数
+                currentPage: 0, // 当前页
+                jPage: 1 // 跳转到某页
+            }
+        },
+        // watch
+        watch: {
+            users: {
+                handler() {
+                    userStorage.save(this.users)
+                },
+                deep: true
+            }
+        },
+
+        // computed properties
+        computed: {
+            filteredUsers() {
+                let fUsers = this.queryFilter('name', this.fKey, this.users)
+                fUsers = this.queryFilter('audit', this.aKey, fUsers)
+                return this.paginate(fUsers)
+            }
+        },
+        methods: {
+            addUser() {
+                this.users.push(this.user)
+            },
+            queryFilter(prop, key, arr) {
+                // none query string, return arr
+                if (!key) {
+                    return arr
+                }
+                // filtering
+                arr = arr.filter((user) => {
+                    if (user[prop].toString().indexOf(key) !== -1) {
+                        return true
+                    }
+                })
+                // if it's a new filter query, research and turn to page one
+                if (key !== this[prop]) {
+                    this.currentPage = 0
+                    // save last filter query
+                    this[prop] = key
+                }
+                return arr
+            },
+            paginate(arr) {
+                // totalPage
+                this.totalPage = Math.ceil(arr.length / this.limit)
+                let page = this.currentPage
+                let curLimit = this.limit
+                // 返回指定条数的数组
+                arr = arr.slice(curLimit * page, curLimit * (page + 1))
+                return arr
+            },
+            turnPage(num) {
+                if (num === 1) {
+                    if (this.currentPage === this.totalPage - 1) {
+                        return
+                    } else {
+                        this.currentPage++
+                    }
+                } else {
+                    if (this.currentPage === 0) {
+                        return
+                    } else {
+                        this.currentPage--
+                    }
+                }
+            },
+            jumpToPage() {
+                let jPage = this.jPage - 1
+                if (jPage < 0 || jPage >= this.totalPage) {
+                    alert('page out of range')
+                } else {
+                    this.currentPage = jPage
+                }
+            },
+            doAudit(newAudit, user) {
+                // user 可指定，为 0 时指选中用户，为 -1 时指全部用户
+                let users = []
+                if (user === 0) {
+                    users = this.selectedUsers
+                } else if (user === -1) {
+                    this.filteredUsers.forEach((v) => {
+                        users.push(v)
+                    })
+                } else {
+                    users.push(user)
+                }
+                this.setAuditId(users, newAudit)
+            },
+            setAuditId(users, aId) {
+                users.forEach((user) => {
+                    user.audit = aId
+                })
+            },
+            showModel(e) {
+                let target = e.target
+                if (target.nodeName.toLowerCase() === 'td') {
+                    $('.ui.modal').modal('show')
+                }
+                let index = $(target.parentNode).index()
+                this.selectedUser = this.filteredUsers[index]
+            }
+        }
+    })
+</script>
+</body>
+
+</html>
